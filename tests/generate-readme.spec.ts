@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { ReadmeGeneratorPage } from "./pages/readme-generator.page";
 
 const profile = {
   name: "Yurii",
@@ -7,6 +8,9 @@ const profile = {
   currentWorkLink: "https://github.com/Yurii-Rab/test-automation-framework",
   collaborateOn: "playwright-projects",
   collaborateOnLink: "https://github.com/Yurii-Rab/playwright-projects",
+};
+
+const socials = {
   linkedin: "yurii-rabishchuk",
   github: "Yurii-Rab",
 };
@@ -24,32 +28,23 @@ const skills = [
 const cyan = "#34ebdb";
 
 test("generates a README from the filled in profile", async ({ page }) => {
-  await page.goto("./");
+  const generator = new ReadmeGeneratorPage(page);
+  await generator.open();
 
-  await page.locator("#title-name").fill(profile.name);
-  await page.locator("#subtitle").fill(profile.subtitle);
-
-  await page.locator("#currentWork").fill(profile.currentWork);
-  await page.locator("#currentWork-link").fill(profile.currentWorkLink);
-  await page.locator("#collaborateOn").fill(profile.collaborateOn);
-  await page.locator("#collaborateOn-link").fill(profile.collaborateOnLink);
+  await generator.fillProfile(profile);
+  await generator.selectSkills(skills);
+  await generator.fillSocials(socials);
+  await generator.enableTopSkills(cyan);
 
   for (const skill of skills) {
-    await page.locator(`label[for="${skill}"]`).click();
-    await expect(page.locator(`#${skill}`)).toBeChecked();
+    await expect(generator.skillCheckbox(skill)).toBeChecked();
   }
 
-  await page.locator("#linkedin").fill(profile.linkedin);
-  await page.locator("#github").fill(profile.github);
+  await generator.generate();
 
-  await page.locator('label[for="top-languages"]').click();
-  await page.locator("#top-languages-open-btn").click();
-  await page.locator("#top-lang-title-color").fill(cyan);
-
-  await page.getByRole("button", { name: "Generate README" }).click();
-
-  const markdown = page.locator("#markdown-content");
-  await expect(markdown).toContainText(profile.subtitle);
-  await expect(markdown).toContainText("typescript");
-  await expect(markdown).toContainText(`title_color=${cyan.replace("#", "")}`);
+  await expect(generator.markdown).toContainText(profile.subtitle);
+  await expect(generator.markdown).toContainText("typescript");
+  await expect(generator.markdown).toContainText(
+    `title_color=${cyan.replace("#", "")}`,
+  );
 });

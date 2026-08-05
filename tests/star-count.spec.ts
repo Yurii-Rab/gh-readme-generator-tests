@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { ReadmeGeneratorPage } from "./pages/readme-generator.page";
 
 const repoUrl =
   "https://github.com/rahuldkjain/github-profile-readme-generator";
@@ -12,12 +13,12 @@ function toGitHubDisplay(stars: number): string {
 test("star count on the generator matches the count shown on GitHub", async ({
   page,
 }) => {
-  await page.goto("./");
+  const generator = new ReadmeGeneratorPage(page);
+  await generator.open();
 
-  const counter = page.locator('a[aria-label^="Star"] .github-count');
-  await expect(counter).not.toHaveText("0");
+  await expect(generator.starCount).not.toHaveText("0");
 
-  const stars = Number(await counter.textContent());
+  const stars = Number(await generator.starCount.textContent());
   expect(stars).toBeGreaterThan(0);
 
   await page.goto(repoUrl);
