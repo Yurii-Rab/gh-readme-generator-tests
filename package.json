@@ -1,0 +1,19 @@
+{
+  "name": "gh-readme-generator-tests",
+  "version": "1.0.0",
+  "description": "Playwright end-to-end tests for the GitHub Profile README Generator",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  }
+}
