@@ -20,7 +20,7 @@ export default defineConfig({
     baseURL: 'https://rahuldkjain.github.io/gh-profile-readme-generator/',
 
     // Diagnostics: keep the artifacts that explain a failure, drop the rest.
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
