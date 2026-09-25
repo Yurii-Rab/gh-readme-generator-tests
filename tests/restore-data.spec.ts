@@ -12,5 +12,5 @@ test("restores the form from an uploaded json file", async ({ page }) => {
   await generator.restoreFrom(dataFile);
 
   await expect(generator.funFactPrefix).toHaveValue(data.prefix.funFact);
-  await expect(generator.currentWork).toHaveValue("deliberately wrong value");
+  await expect(generator.currentWork).toHaveValue(data.data.currentWork);
 });
