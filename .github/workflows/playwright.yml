@@ -10,16 +10,18 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: write
 
 jobs:
   test:
+    name: Run tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: npm
@@ -35,11 +37,12 @@ jobs:
 
       - name: Upload report
         if: ${{ !cancelled() }}
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: playwright-report/
 
   report:
+    name: Publish report
     # publish the report even when tests fail, that's when it's needed most
     needs: test
     if: ${{ !cancelled() }}
@@ -54,7 +57,39 @@ jobs:
     steps:
       - name: Publish report
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       - name: Add report link to the run summary
         run: echo "### [Open the Playwright report](${{ steps.deployment.outputs.page_url }})" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on the pull request
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v9
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          REPORT_URL: ${{ steps.deployment.outputs.page_url }}
+        with:
+          script: |
+            const marker = '<!-- playwright-report -->';
+            const failed = process.env.TEST_RESULT === 'failure';
+            // on failure, open the report already filtered to the failed tests
+            const link = failed ? `${process.env.REPORT_URL}#?q=s:failed` : process.env.REPORT_URL;
+
+            const body = [
+              marker,
+              failed ? '## ❌ Playwright tests failed' : '## ✅ Playwright tests passed',
+              '',
+              `### [Open the report and traces](${link})`,
+            ].join('\n');
+
+            // update the same comment on every run instead of adding a new one
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find((c) => c.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
