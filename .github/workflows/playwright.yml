@@ -86,11 +86,19 @@ jobs:
             // tests failed: post or update the comment, linking straight to the failed tests
             if (process.env.TEST_RESULT !== 'failure' || !process.env.REPORT_URL) return;
 
+            // the run id makes every link unique, so browsers never show a cached older report
+            const { runId } = context;
+            const reportLink = `${process.env.REPORT_URL}?run=${runId}#?q=s:failed`;
+            const runLink = `${context.serverUrl}/${owner}/${repo}/actions/runs/${runId}`;
+            const commit = context.payload.pull_request.head.sha.slice(0, 7);
+
             const body = [
               marker,
               '## ❌ Playwright tests failed',
               '',
-              `### [Open the report and traces](${process.env.REPORT_URL}#?q=s:failed)`,
+              `### [Open the report and traces](${reportLink})`,
+              '',
+              `Latest run on commit \`${commit}\`, [see the workflow run](${runLink}).`,
             ].join('\n');
 
             if (existing) {
