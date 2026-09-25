@@ -42,17 +42,17 @@ jobs:
         id: tests
         run: npx playwright test
 
-      # everything below runs even when tests fail, that's when the report matters most
+      # the report is only published when tests fail, that's the only time anyone needs it
 
       - name: Upload report
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.tests.outcome == 'failure' }}
         uses: actions/upload-pages-artifact@v5
         with:
           path: playwright-report/
 
       - name: Publish report
         id: deployment
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.tests.outcome == 'failure' }}
         # a publishing problem shouldn't turn the check red, only failing tests should
         continue-on-error: true
         uses: actions/deploy-pages@v5
@@ -61,8 +61,8 @@ jobs:
         if: ${{ !cancelled() && steps.deployment.outcome == 'success' }}
         run: echo "### [Open the Playwright report](${{ steps.deployment.outputs.page_url }})" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Comment on the pull request
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && steps.deployment.outcome == 'success' }}
+      - name: Update the pull request comment
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         uses: actions/github-script@v9
         env:
           TEST_RESULT: ${{ steps.tests.outcome }}
@@ -70,22 +70,28 @@ jobs:
         with:
           script: |
             const marker = '<!-- playwright-report -->';
-            const failed = process.env.TEST_RESULT === 'failure';
-            // on failure, open the report already filtered to the failed tests
-            const link = failed ? `${process.env.REPORT_URL}#?q=s:failed` : process.env.REPORT_URL;
-
-            const body = [
-              marker,
-              failed ? '## ❌ Playwright tests failed' : '## ✅ Playwright tests passed',
-              '',
-              `### [Open the report and traces](${link})`,
-            ].join('\n');
-
-            // update the same comment on every run instead of adding a new one
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
             const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
             const existing = comments.find((c) => c.body?.includes(marker));
+
+            // tests passed: remove any old failure comment, the green check says enough
+            if (process.env.TEST_RESULT === 'success') {
+              if (existing) {
+                await github.rest.issues.deleteComment({ owner, repo, comment_id: existing.id });
+              }
+              return;
+            }
+
+            // tests failed: post or update the comment, linking straight to the failed tests
+            if (process.env.TEST_RESULT !== 'failure' || !process.env.REPORT_URL) return;
+
+            const body = [
+              marker,
+              '## ❌ Playwright tests failed',
+              '',
+              `### [Open the report and traces](${process.env.REPORT_URL}#?q=s:failed)`,
+            ].join('\n');
 
             if (existing) {
               await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
