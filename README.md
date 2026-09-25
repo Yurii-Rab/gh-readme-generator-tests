@@ -25,15 +25,14 @@ The comment updates on every push, so the link always shows the latest run.
 
 ![Comment posted on the pull request when tests fail](docs/failure-comment.png)
 
-To see it live, one test in
-[pull request #2](https://github.com/Yurii-Rab/gh-readme-generator-tests/pull/2)
-is broken on purpose. Open the PR and click the link in the comment to go
-straight to the failed test and its trace.
+To see it live, open the
+[demo pull request](https://github.com/Yurii-Rab/gh-readme-generator-tests/pull/3), where one test is broken on purpose.
+Click the link in the comment to go straight to the failed test and its trace.
 
 ## Where to look
 
-- The change itself, with one test failing on purpose: [pull request #2](https://github.com/Yurii-Rab/gh-readme-generator-tests/pull/2)
-- The CI workflow changes: [files changed in the PR](https://github.com/Yurii-Rab/gh-readme-generator-tests/pull/2/files)
+- The CI workflow: [`.github/workflows/playwright.yml`](.github/workflows/playwright.yml)
+- A live failure, with one test broken on purpose: [demo pull request](https://github.com/Yurii-Rab/gh-readme-generator-tests/pull/3)
 - The tests: [`tests/`](tests/)
 
 ## Running locally
