@@ -17,6 +17,12 @@ jobs:
     name: Run tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - uses: actions/checkout@v7
@@ -33,7 +39,10 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run tests
+        id: tests
         run: npx playwright test
+
+      # everything below runs even when tests fail, that's when the report matters most
 
       - name: Upload report
         if: ${{ !cancelled() }}
@@ -41,32 +50,22 @@ jobs:
         with:
           path: playwright-report/
 
-  report:
-    name: Publish report
-    # publish the report even when tests fail, that's when it's needed most
-    needs: test
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-    concurrency:
-      group: pages
-      cancel-in-progress: false
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
       - name: Publish report
         id: deployment
+        if: ${{ !cancelled() }}
+        # a publishing problem shouldn't turn the check red, only failing tests should
+        continue-on-error: true
         uses: actions/deploy-pages@v5
 
       - name: Add report link to the run summary
+        if: ${{ !cancelled() && steps.deployment.outcome == 'success' }}
         run: echo "### [Open the Playwright report](${{ steps.deployment.outputs.page_url }})" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment on the pull request
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && steps.deployment.outcome == 'success' }}
         uses: actions/github-script@v9
         env:
-          TEST_RESULT: ${{ needs.test.result }}
+          TEST_RESULT: ${{ steps.tests.outcome }}
           REPORT_URL: ${{ steps.deployment.outputs.page_url }}
         with:
           script: |
