@@ -14,7 +14,11 @@ export default defineConfig({
   // Full parallelism across files; each test gets its own browser context.
   fullyParallel: true,
 
-  reporter: [['html', { open: 'never' }], ['list']],
+  // On CI, the github reporter shows failures inline on the run and the PR,
+  // so nobody has to download the report to see what broke.
+  reporter: process.env.CI
+    ? [['github'], ['html', { open: 'never' }]]
+    : [['html', { open: 'never' }], ['list']],
 
   use: {
     baseURL: 'https://rahuldkjain.github.io/gh-profile-readme-generator/',
